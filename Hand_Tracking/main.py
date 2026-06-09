@@ -4,23 +4,26 @@ import joblib
 import numpy as np
 import os
 
-model_filename = 'model_tangan.pkl'
+# Trained model filename
+model_filename = 'hand_model.pkl'
 
-# Periksa apakah model sudah dilatih
 if not os.path.exists(model_filename):
-    print(f"Error: Model '{model_filename}' tidak dapat ditemukan.")
-    print("Silakan jalankan 'train_model.py' terlebih dahulu.")
+    print(f"Error: Model '{model_filename}' not found.")
+    print("Please run 'train_model.py' first to train the model.")
     exit()
 
-print("Memuat model...")
+print("Loading model...")
+# Load the trained model
 model = joblib.load(model_filename)
 
+# Initialize Mediapipe hands module
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
+# Open webcam
 cap = cv2.VideoCapture(0)
 
-print("Mulai Program Utama. Tekan 'q' pada jendela video untuk keluar.")
+print("Starting Main Program. Press 'q' on the video window to exit.")
 
 with mp_hands.Hands(
     min_detection_confidence=0.7,
@@ -32,38 +35,60 @@ with mp_hands.Hands(
         if not success:
             break
 
+        # Flip the image horizontally for a selfie-view display
         image = cv2.flip(image, 1)
+        # Convert BGR to RGB
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # Proses frame menggunakan MediaPipe
+        # Process the image and detect hand landmarks
         results = hands.process(image_rgb)
 
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
-                # Gambar keypoints di atas tangan
+                # Draw hand landmarks and connections
                 mp_drawing.draw_landmarks(
                     image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
                 
-                # Ekstrak 63 koordinat
+                # Extract x, y, z coordinates for all 21 hand landmarks
                 landmark_list = []
                 for lm in hand_landmarks.landmark:
                     landmark_list.extend([lm.x, lm.y, lm.z])
                 
-                # Transformasi ke numpy array (1, 63)
+                # Transform into numpy array (1, 63) suitable for model input
                 input_data = np.array([landmark_list])
                 
-                # Prediksi label menggunakan model yang dilatih
-                prediction = model.predict(input_data)
-                label = str(prediction[0])
+                # Dictionary mapping for output labels (can be edited as needed)
+                label_map = {
+                    '0': 'Zero',
+                    '1': 'One',
+                    '2': 'Two',
+                    '3': 'Three',
+                    '4': 'Four',
+                    '5': 'Five',
+                    '6': 'Thumbs Up',
+                    '7': 'Thumbs Down',
+                    '8': 'Metal',
+                    '9': 'Nice'
+                }
                 
-                # Tambahkan teks hasil prediksi di layar
-                cv2.putText(image, f"Pola Prediksi: Kelas {label}", (10, 50), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+                # Predict the label using the trained model
+                prediction = model.predict(input_data)
+                raw_label = str(prediction[0])
+                
+                # Get the name from the mapping, if not found display the raw label
+                display_label = label_map.get(raw_label, f"Class {raw_label}")
+                
+                # Add the prediction text to the screen
+                cv2.putText(image, f"Prediction: {display_label}", (10, 50), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
-        cv2.imshow('Deteksi Pola Tangan Real-time', image)
+        # Display the video feed
+        cv2.imshow('Real-time Hand Gesture Detection', image)
         
+        # Exit if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
+# Release resources
 cap.release()
 cv2.destroyAllWindows()

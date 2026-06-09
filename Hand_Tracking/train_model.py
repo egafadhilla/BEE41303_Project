@@ -1,49 +1,47 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 import joblib
 import os
 
-csv_file = 'dataset_tangan.csv'
+# Dataset filename
+csv_file = 'hand_dataset.csv'
 
 if not os.path.exists(csv_file):
-    print(f"Error: File '{csv_file}' tidak ditemukan!")
-    print("Silakan jalankan 'collect_data.py' terlebih dahulu untuk mengumpulkan data.")
+    print(f"Error: File '{csv_file}' not found!")
+    print("Please run 'collect_data.py' first to collect the data.")
     exit()
 
-print("Memuat data dataset...")
+print("Loading dataset...")
 data = pd.read_csv(csv_file, header=None)
 
-# Kolom 0 adalah label (kelas dari 0-9), kolom sisanya adalah fitur koordinat (x, y, z)
+# Separate features (X) and labels (y)
+# Column 0 is the label, the rest are x, y, z coordinates
 X = data.iloc[:, 1:].values
 y = data.iloc[:, 0].values
 
 print(f"Total data: {len(data)}")
 
-# Bagi data menjadi data latih (80%) dan data uji (20%)
+# Split data into training (80%) and testing (20%) sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-print("\nSedang melatih model (Support Vector Machine / Random Forest)...")
-# Menggunakan Support Vector Classifier (SVC) - model ringan dan sangat cocok untuk klasifikasi pola dan Jetson Nano
+print("\nCurrently training model (Support Vector Machine)...")
+# Initialize SVM model (very suitable for lightweight devices like Jetson Nano)
 model = SVC(kernel='linear', probability=True)
 
-# Alternatif: Random Forest
-# model = RandomForestClassifier(n_estimators=100)
-
-# Latih model dengan data
+# Train the model with training data
 model.fit(X_train, y_train)
 
-# Lakukan prediksi pada data uji
+# Make predictions on testing data
 y_pred = model.predict(X_test)
 
-# Hitung akurasi
+# Calculate model accuracy
 accuracy = accuracy_score(y_test, y_pred)
-print(f"-> Akurasi model: {accuracy * 100:.2f}%")
+print(f"-> Model accuracy: {accuracy * 100:.2f}%")
 
-# Simpan model agar bisa digunakan ulang tanpa training lagi
-model_filename = 'model_tangan.pkl'
+# Save the trained model
+model_filename = 'hand_model.pkl'
 joblib.dump(model, model_filename)
-print(f"Model berhasil disimpan sebagai '{model_filename}'.")
-print("Sekarang Anda dapat menjalankan 'main.py' untuk mendeteksi gestur.")
+print(f"Model successfully saved to '{model_filename}'.")
+print("Now you can run 'main.py' to detect gestures.")
